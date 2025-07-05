@@ -1,0 +1,10 @@
+@LunchPoll.Api_HostAddress = http://localhost:5054
+
+GET {{LunchPoll.Api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
+
+GET {{LunchPoll.Api_HostAddress}}/api/employees
+
+###
