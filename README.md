@@ -1,9 +1,9 @@
 # Lunchpoll
 
-Dockerized API
-Dockerized Sql Server database
-Dockerized MVC UI
-Dockerized Serilog
-Nginx
-SSL Tremination
-Kubertetes
+## Dockerized API
+## Dockerized SQL Server database
+## Dockerized MVC UI
+## Dockerized Serilog
+## Nginx as reverse proxy
+## SSL Termination
+## Kubernetes
