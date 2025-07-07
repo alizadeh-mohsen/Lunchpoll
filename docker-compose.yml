@@ -53,11 +53,14 @@ services:
         context: .
         dockerfile: nginx/Dockerfile
     ports:
-      - "8083:8083"
+      - "44391:44391"
     depends_on:
       - lunchpoll.mvc
     networks:
-        - app-network
+      app-network:
+        aliases: 
+            - "lunchpoll.com"
+            - "api.lunchpoll.com"
     restart: always
     
 networks:

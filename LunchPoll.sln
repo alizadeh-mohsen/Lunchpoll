@@ -11,7 +11,15 @@ Project("{E53339B2-1760-4266-BCC7-CA923CBCF16C}") = "docker-compose", "docker-co
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "nginx", "nginx", "{02EA681E-C7D8-13C7-8484-4AC65E1B71E8}"
 	ProjectSection(SolutionItems) = preProject
+		nginx\api-cert.conf = nginx\api-cert.conf
+		nginx\api-cert.crt = nginx\api-cert.crt
+		nginx\api-cert.key = nginx\api-cert.key
+		nginx\api-cert.pfx = nginx\api-cert.pfx
 		..\..\Downloads\ConferenceAttendees\ConferenceAttendees.CloudNativeDevelopment-master\nginx\Dockerfile = ..\..\Downloads\ConferenceAttendees\ConferenceAttendees.CloudNativeDevelopment-master\nginx\Dockerfile
+		nginx\mvc-cert.conf = nginx\mvc-cert.conf
+		nginx\mvc-cert.crt = nginx\mvc-cert.crt
+		nginx\mvc-cert.key = nginx\mvc-cert.key
+		nginx\mvc-cert.pfx = nginx\mvc-cert.pfx
 		..\..\Downloads\ConferenceAttendees\ConferenceAttendees.CloudNativeDevelopment-master\nginx\nginx.conf = ..\..\Downloads\ConferenceAttendees\ConferenceAttendees.CloudNativeDevelopment-master\nginx\nginx.conf
 	EndProjectSection
 EndProject
