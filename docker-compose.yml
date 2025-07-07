@@ -1,0 +1,65 @@
+services:
+  lunchpoll.api:
+    image: ${DOCKER_REGISTRY-}lunchpollapi
+    build:
+      context: .
+      dockerfile: LunchPoll.Api/Dockerfile
+    ports:
+      - "7106:7106"
+    environment:
+      - ASPNETCORE_URLS=HTTP://*:7106
+    depends_on: [mssql, seq_logs]
+    networks:
+      - app-network
+  lunchpoll.mvc:
+    image: ${DOCKER_REGISTRY-}lunchpollmvc
+    build:
+      context: .
+      dockerfile: LunchPoll.MVC/Dockerfile
+    ports:
+      - "7124:7124"
+    environment:
+      - ASPNETCORE_URLS=HTTP://*:7124
+    depends_on:
+      - lunchpoll.api
+    networks:
+      - app-network
+  mssql:
+    image: "mcr.microsoft.com/mssql/server"
+    container_name: launchpoll-mssql
+    hostname: mssql
+    environment: 
+      - MSSQL_SA_PASSWORD=Password@1
+      - ACCEPT_EULA=Y
+    restart: unless-stopped
+    ports:
+      - "1401:1433"
+    networks:
+      - app-network
+  seq_logs:
+    image: datalust/seq
+    restart: unless-stopped
+    ports:
+      - "5342:80"
+    environment:
+      - ACCEPT_EULA=Y
+      - SEQ_FIRSTRUN_ADMINUSERNAME=nblumhardt
+      - SEQ_FIRSTRUN_ADMINPASSWORDHASH=QNEZ8nmzGR5USlt6yNlcIX+MxnQgZSkZs0CY/PUj4lbsOS8o7v0HuaIa0C5Kwnia1v3u/Y1AzL/1gg9R9k5srFv64JqdxgyQV24t3kTlEqrf
+      - SEQ_FIRSTRUN_REQUIREAUTHENTICATIONFORHTTPINGESTION=True 
+    networks:
+      - app-network
+  nginx:
+    build:
+        context: .
+        dockerfile: nginx/Dockerfile
+    ports:
+      - "8083:8083"
+    depends_on:
+      - lunchpoll.mvc
+    networks:
+        - app-network
+    restart: always
+    
+networks:
+  app-network:
+    driver: bridge

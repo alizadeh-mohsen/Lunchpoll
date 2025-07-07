@@ -1,4 +1,7 @@
+using AutoMapper;
 using LunchPoll.Api.Data;
+using LunchPoll.Api.Data.Dtos;
+using LunchPoll.MVC.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -6,65 +9,177 @@ namespace LunchPoll.Api.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    public class EmployeesController(ApplicationDbContext dbContext) : ControllerBase
+    public class EmployeesController(ApplicationDbContext _context, IMapper _autoMapper) : ControllerBase
     {
         [HttpGet]
-        public async Task<IActionResult> GetEmployees()
+        public async Task<ActionResult<ResponseDto>> Get()
         {
-            return dbContext.Employees.Any()
-                ? Ok( await dbContext.Employees.ToListAsync())
-                : NoContent();
+            try
+            {
+                var Employees = await _context.Employees.ToListAsync();
+
+                if (Employees == null || !Employees.Any())
+                {
+                    return new ResponseDto
+                    {
+                        IsSuccess = false,
+                        ErrorMessage = "No Employees found."
+                    };
+                }
+
+                var responseDto = new ResponseDto
+                {
+                    Result = _autoMapper.Map<IEnumerable<EmployeeDto>>(Employees),
+                };
+                return Ok(responseDto);
+
+            }
+            catch (Exception ex)
+            {
+
+                return new ResponseDto
+                {
+                    IsSuccess = false,
+                    ErrorMessage = ex.Message
+                };
+            }
         }
 
         [HttpGet("{id}")]
-        public async Task<IActionResult> GetEmployeeById(string id)
+        public async Task<ActionResult<ResponseDto>> Get(string id)
         {
-            var Employee = await dbContext.Employees.FirstOrDefaultAsync(r => r.Id == id);
-            return Employee != null ? Ok(Employee) : NotFound();
+            try
+            {
+                var Employee = await _context.Employees.FindAsync(id);
+                if (Employee == null)
+                {
+                    return NotFound(new ResponseDto
+                    {
+                        IsSuccess = false,
+                        ErrorMessage = "Employee not found."
+                    });
+                }
+                var responseDto = new ResponseDto
+                {
+                    Result = _autoMapper.Map<EmployeeDto>(Employee),
+                };
+                return Ok(responseDto);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new ResponseDto
+                {
+                    IsSuccess = false,
+                    ErrorMessage = ex.Message
+                });
+            }
         }
 
+
         [HttpPost]
-        public async Task<IActionResult> CreateEmployee([FromBody] string EmployeeName)
+        public async Task<ActionResult<ResponseDto>> Create([FromBody] EmployeeDto EmployeeDto)
         {
-            if (string.IsNullOrWhiteSpace(EmployeeName))
+            try
             {
-                return BadRequest("Employee name cannot be empty.");
+                if (EmployeeDto == null)
+                {
+                    return BadRequest(new ResponseDto
+                    {
+                        IsSuccess = false,
+                        ErrorMessage = "Invalid Employee data."
+                    });
+                }
+                var Employee = _autoMapper.Map<Employee>(EmployeeDto);
+                await _context.Employees.AddAsync(Employee);
+                await _context.SaveChangesAsync();
+                var responseDto = new ResponseDto
+                {
+                    Result = _autoMapper.Map<EmployeeDto>(Employee),
+                };
+                return Ok(responseDto);
             }
-
-            dbContext.Employees.Add(new Employee { Name = EmployeeName });
-            await dbContext.SaveChangesAsync();
-
-            return CreatedAtAction(nameof(GetEmployees), new { name = EmployeeName }, EmployeeName);
+            catch (Exception ex)
+            {
+                return BadRequest(new ResponseDto
+                {
+                    IsSuccess = false,
+                    ErrorMessage = ex.Message
+                });
+            }
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateEmployee(string id, [FromBody] string EmployeeName)
+        public async Task<ActionResult<ResponseDto>> Update(string id, [FromBody] EmployeeDto EmployeeDto)
         {
-            if (string.IsNullOrWhiteSpace(EmployeeName))
+            try
             {
-                return BadRequest("Employee name cannot be empty.");
+                if (EmployeeDto == null || id != EmployeeDto.Id)
+                {
+                    return BadRequest(new ResponseDto
+                    {
+                        IsSuccess = false,
+                        ErrorMessage = "Invalid Employee data."
+                    });
+                }
+                var existingEmployee = await _context.Employees.FindAsync(id);
+                if (existingEmployee == null)
+                {
+                    return NotFound(new ResponseDto
+                    {
+                        IsSuccess = false,
+                        ErrorMessage = "Employee not found."
+                    });
+                }
+
+                var updatedEmployee = _autoMapper.Map(EmployeeDto, existingEmployee);
+                _context.Employees.Update(updatedEmployee);
+                await _context.SaveChangesAsync();
+                var responseDto = new ResponseDto
+                {
+                    Result = _autoMapper.Map<EmployeeDto>(existingEmployee),
+                };
+                return Ok(responseDto);
             }
-            var Employee = dbContext.Employees.FirstOrDefault(r => r.Id == id);
-            if (Employee == null)
+            catch (Exception ex)
             {
-                return NotFound();
+                return BadRequest(new ResponseDto
+                {
+                    IsSuccess = false,
+                    ErrorMessage = ex.Message
+                });
             }
-            Employee.Name = EmployeeName;
-           await  dbContext.SaveChangesAsync();
-            return NoContent();
         }
 
         [HttpDelete("{id}")]
-        public async Task<IActionResult>DeleteEmployee(string id)
+        public async Task<ActionResult<ResponseDto>> Delete(string id)
         {
-            var Employee = dbContext.Employees.FirstOrDefault(r => r.Id == id);
-            if (Employee == null)
+            try
             {
-                return NotFound();
+                var Employee = await _context.Employees.FindAsync(id);
+                if (Employee == null)
+                {
+                    return NotFound(new ResponseDto
+                    {
+                        IsSuccess = false,
+                        ErrorMessage = "Employee not found."
+                    });
+                }
+                _context.Employees.Remove(Employee);
+                await _context.SaveChangesAsync();
+                return Ok(new ResponseDto
+                {
+                    Result = "Employee deleted successfully."
+                });
             }
-            dbContext.Employees.Remove(Employee);
-            await dbContext.SaveChangesAsync();
-            return NoContent();
+            catch (Exception ex)
+            {
+                return BadRequest(new ResponseDto
+                {
+                    IsSuccess = false,
+                    ErrorMessage = ex.Message
+                });
+            }
         }
+
     }
 }

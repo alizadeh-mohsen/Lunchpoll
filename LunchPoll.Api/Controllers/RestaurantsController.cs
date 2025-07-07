@@ -1,4 +1,7 @@
+using AutoMapper;
 using LunchPoll.Api.Data;
+using LunchPoll.Api.Data.Dtos;
+using LunchPoll.MVC.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -6,63 +9,177 @@ namespace LunchPoll.Api.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    public class RestaurantsController(ApplicationDbContext dbContext) : ControllerBase
+    public class RestaurantsController(ApplicationDbContext _context, IMapper _autoMapper) : ControllerBase
     {
         [HttpGet]
-        public async Task<IActionResult> GetRestaurants()
+        public async Task<ActionResult<ResponseDto>> Get()
         {
-            return dbContext.Restaurants.Any()
-                ? Ok(await dbContext.Restaurants.ToListAsync())
-                : NoContent();
+            try
+            {
+                var Restaurants = await _context.Restaurants.ToListAsync();
+
+                if (Restaurants == null || !Restaurants.Any())
+                {
+                    return new ResponseDto
+                    {
+                        IsSuccess = false,
+                        ErrorMessage = "No Restaurants found."
+                    };
+                }
+
+                var responseDto = new ResponseDto
+                {
+                    Result = _autoMapper.Map<IEnumerable<RestaurantDto>>(Restaurants),
+                };
+                return Ok(responseDto);
+
+            }
+            catch (Exception ex)
+            {
+
+                return new ResponseDto
+                {
+                    IsSuccess = false,
+                    ErrorMessage = ex.Message
+                };
+            }
         }
 
         [HttpGet("{id}")]
-        public async Task<IActionResult> GetRestaurantById(string id)
+        public async Task<ActionResult<ResponseDto>> Get(string id)
         {
-            var restaurant = await dbContext.Restaurants.FirstOrDefaultAsync(r => r.Id == id);
-            return restaurant != null ? Ok(restaurant) : NotFound();
+            try
+            {
+                var Restaurant = await _context.Restaurants.FindAsync(id);
+                if (Restaurant == null)
+                {
+                    return NotFound(new ResponseDto
+                    {
+                        IsSuccess = false,
+                        ErrorMessage = "Restaurant not found."
+                    });
+                }
+                var responseDto = new ResponseDto
+                {
+                    Result = _autoMapper.Map<RestaurantDto>(Restaurant),
+                };
+                return Ok(responseDto);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new ResponseDto
+                {
+                    IsSuccess = false,
+                    ErrorMessage = ex.Message
+                });
+            }
         }
 
+
         [HttpPost]
-        public async Task<IActionResult> CreateRestaurant([FromBody] string restaurantName)
+        public async Task<ActionResult<ResponseDto>> Create([FromBody] RestaurantDto RestaurantDto)
         {
-            if (string.IsNullOrWhiteSpace(restaurantName))
+            try
             {
-                return BadRequest("Restaurant name cannot be empty.");
+                if (RestaurantDto == null)
+                {
+                    return BadRequest(new ResponseDto
+                    {
+                        IsSuccess = false,
+                        ErrorMessage = "Invalid Restaurant data."
+                    });
+                }
+                var Restaurant = _autoMapper.Map<Restaurant>(RestaurantDto);
+                await _context.Restaurants.AddAsync(Restaurant);
+                await _context.SaveChangesAsync();
+                var responseDto = new ResponseDto
+                {
+                    Result = _autoMapper.Map<RestaurantDto>(Restaurant),
+                };
+                return Ok(responseDto);
             }
-            dbContext.Restaurants.Add(new Restaurant { Name = restaurantName });
-            await dbContext.SaveChangesAsync();
-            return CreatedAtAction(nameof(GetRestaurants), new { name = restaurantName }, restaurantName);
+            catch (Exception ex)
+            {
+                return BadRequest(new ResponseDto
+                {
+                    IsSuccess = false,
+                    ErrorMessage = ex.Message
+                });
+            }
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateRestaurant(string id, [FromBody] string restaurantName)
+        public async Task<ActionResult<ResponseDto>> Update(string id, [FromBody] RestaurantDto RestaurantDto)
         {
-            if (string.IsNullOrWhiteSpace(restaurantName))
+            try
             {
-                return BadRequest("Restaurant name cannot be empty.");
+                if (RestaurantDto == null || id != RestaurantDto.Id)
+                {
+                    return BadRequest(new ResponseDto
+                    {
+                        IsSuccess = false,
+                        ErrorMessage = "Invalid Restaurant data."
+                    });
+                }
+                var existingRestaurant = await _context.Restaurants.FindAsync(id);
+                if (existingRestaurant == null)
+                {
+                    return NotFound(new ResponseDto
+                    {
+                        IsSuccess = false,
+                        ErrorMessage = "Restaurant not found."
+                    });
+                }
+
+                var updatedRestaurant = _autoMapper.Map(RestaurantDto, existingRestaurant);
+                _context.Restaurants.Update(updatedRestaurant);
+                await _context.SaveChangesAsync();
+                var responseDto = new ResponseDto
+                {
+                    Result = _autoMapper.Map<RestaurantDto>(existingRestaurant),
+                };
+                return Ok(responseDto);
             }
-            var restaurant = dbContext.Restaurants.FirstOrDefault(r => r.Id == id);
-            if (restaurant == null)
+            catch (Exception ex)
             {
-                return NotFound();
+                return BadRequest(new ResponseDto
+                {
+                    IsSuccess = false,
+                    ErrorMessage = ex.Message
+                });
             }
-            restaurant.Name = restaurantName;
-            await dbContext.SaveChangesAsync();
-            return NoContent();
         }
 
         [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteRestaurant(string id)
+        public async Task<ActionResult<ResponseDto>> Delete(string id)
         {
-            var restaurant = dbContext.Restaurants.FirstOrDefault(r => r.Id == id);
-            if (restaurant == null)
+            try
             {
-                return NotFound();
+                var Restaurant = await _context.Restaurants.FindAsync(id);
+                if (Restaurant == null)
+                {
+                    return NotFound(new ResponseDto
+                    {
+                        IsSuccess = false,
+                        ErrorMessage = "Restaurant not found."
+                    });
+                }
+                _context.Restaurants.Remove(Restaurant);
+                await _context.SaveChangesAsync();
+                return Ok(new ResponseDto
+                {
+                    Result = "Restaurant deleted successfully."
+                });
             }
-            dbContext.Restaurants.Remove(restaurant);
-            await dbContext.SaveChangesAsync();
-            return NoContent();
+            catch (Exception ex)
+            {
+                return BadRequest(new ResponseDto
+                {
+                    IsSuccess = false,
+                    ErrorMessage = ex.Message
+                });
+            }
         }
+
     }
 }
